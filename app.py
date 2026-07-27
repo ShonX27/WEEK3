@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 
 
 # --------------------------------------------------
-# Page Configuration
+# PAGE CONFIGURATION
 # --------------------------------------------------
 
 st.set_page_config(
@@ -15,27 +15,59 @@ st.set_page_config(
 
 
 # --------------------------------------------------
-# Custom Styling
+# CUSTOM NETFLIX STYLE UI
 # --------------------------------------------------
 
 st.markdown(
     """
     <style>
 
-    .main {
-        background-color: #fafafa;
+    .stApp {
+        background-color: #0f0f0f;
+        color: white;
     }
+
 
     h1 {
-        text-align: center;
+        color: #E50914;
+        text-align:center;
+        font-size:45px;
     }
 
-    .metric-card {
-        background-color: white;
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0px 2px 8px rgba(0,0,0,0.1);
-        text-align:center;
+
+    h2, h3 {
+        color:white;
+    }
+
+
+    [data-testid="stMetric"] {
+
+        background-color:#181818;
+        padding:20px;
+        border-radius:15px;
+        border:1px solid #333;
+
+    }
+
+
+    [data-testid="stMetricValue"] {
+
+        color:#E50914;
+
+    }
+
+
+    section[data-testid="stSidebar"] {
+
+        background-color:#141414;
+
+    }
+
+
+    .block-container {
+
+        padding-top:2rem;
+
     }
 
     </style>
@@ -46,7 +78,7 @@ st.markdown(
 
 
 # --------------------------------------------------
-# Load Data
+# LOAD DATA
 # --------------------------------------------------
 
 @st.cache_data
@@ -72,39 +104,43 @@ df = load_data()
 
 
 # --------------------------------------------------
-# Header
+# HEADER
 # --------------------------------------------------
 
-st.title("🎬 Netflix Content Analytics Dashboard")
+st.title(
+    "🎬 Netflix Movies & TV Shows Analytics Dashboard"
+)
+
 
 st.markdown(
 """
-Explore Netflix's movies and TV shows using interactive
-data visualization.
+Explore Netflix's global content library through
+interactive business intelligence visualizations.
 
-**Dataset Analysis Includes:**
+**Dashboard Insights**
 - Content distribution
-- Release trends
-- Countries
-- Genres
-- Ratings
-- Search analytics
+- Audience ratings
+- Global production trends
+- Genre popularity
+- Release growth
 """
 )
 
 
 
 # --------------------------------------------------
-# Sidebar Filters
+# SIDEBAR FILTERS
 # --------------------------------------------------
 
-st.sidebar.header("🎛 Dashboard Filters")
+st.sidebar.title(
+    "🎛 Filters"
+)
 
 
 type_filter = st.sidebar.multiselect(
     "Content Type",
-    df["type"].unique(),
-    default=df["type"].unique()
+    df["type"].dropna().unique(),
+    default=df["type"].dropna().unique()
 )
 
 
@@ -113,14 +149,9 @@ if "rating" in df.columns:
 
     rating_filter = st.sidebar.multiselect(
         "Rating",
-        df["rating"]
-        .dropna()
-        .unique(),
-        default=df["rating"]
-        .dropna()
-        .unique()
+        df["rating"].dropna().unique(),
+        default=df["rating"].dropna().unique()
     )
-
 
 else:
 
@@ -133,29 +164,32 @@ filtered_df = df[
 ]
 
 
+
 if rating_filter:
 
     filtered_df = filtered_df[
-        filtered_df["rating"]
-        .isin(rating_filter)
+        filtered_df["rating"].isin(rating_filter)
     ]
 
 
 
 # --------------------------------------------------
-# KPI Section
+# KPI SECTION
 # --------------------------------------------------
 
-st.subheader("📊 Netflix Overview")
+st.subheader(
+    "📊 Netflix Overview"
+)
 
 
 col1,col2,col3,col4 = st.columns(4)
 
 
 with col1:
+
     st.metric(
         "Total Titles",
-        len(filtered_df)
+        f"{len(filtered_df):,}"
     )
 
 
@@ -163,14 +197,13 @@ with col2:
 
     movies = len(
         filtered_df[
-            filtered_df["type"]
-            =="Movie"
+            filtered_df["type"]=="Movie"
         ]
     )
 
     st.metric(
         "Movies",
-        movies
+        f"{movies:,}"
     )
 
 
@@ -178,24 +211,23 @@ with col3:
 
     shows = len(
         filtered_df[
-            filtered_df["type"]
-            =="TV Show"
+            filtered_df["type"]=="TV Show"
         ]
     )
 
     st.metric(
         "TV Shows",
-        shows
+        f"{shows:,}"
     )
 
 
 with col4:
 
-    years = filtered_df["release_year"].max()
+    latest = filtered_df["release_year"].max()
 
     st.metric(
         "Latest Release",
-        years
+        latest
     )
 
 
@@ -205,10 +237,11 @@ st.divider()
 
 
 # --------------------------------------------------
-# Content Distribution
+# MOVIE VS TV SHOW
 # --------------------------------------------------
 
 col1,col2 = st.columns(2)
+
 
 
 with col1:
@@ -217,106 +250,169 @@ with col1:
         "🎥 Movies vs TV Shows"
     )
 
+
     type_count = (
         filtered_df["type"]
         .value_counts()
     )
 
 
-    fig,ax = plt.subplots()
+    fig = px.pie(
 
-    ax.pie(
-        type_count,
-        labels=type_count.index,
-        autopct="%1.1f%%"
+        values=type_count.values,
+        names=type_count.index,
+        hole=0.45,
+
+        color_discrete_sequence=[
+            "#E50914",
+            "#555555"
+        ]
+
     )
 
-    st.pyplot(fig)
+
+    fig.update_layout(
+        template="plotly_dark",
+        height=400
+    )
 
 
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
+
+
+# --------------------------------------------------
+# RATINGS
+# --------------------------------------------------
 
 with col2:
 
     st.subheader(
-        "⭐ Ratings Distribution"
+        "⭐ Content Ratings"
     )
 
 
     if "rating" in filtered_df.columns:
 
-        rating_count = (
+
+        ratings = (
             filtered_df["rating"]
             .value_counts()
             .head(10)
         )
 
 
-        fig,ax = plt.subplots()
+        fig = px.bar(
 
-        ax.bar(
-            rating_count.index,
-            rating_count.values
+            x=ratings.index,
+            y=ratings.values,
+
+            color=ratings.values,
+
+            color_continuous_scale="reds"
+
         )
 
-        plt.xticks(
-            rotation=45
+
+        fig.update_layout(
+
+            template="plotly_dark",
+
+            height=400,
+
+            xaxis_title="Rating",
+
+            yaxis_title="Titles",
+
+            showlegend=False
+
         )
 
-        st.pyplot(fig)
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
 
 
 
 # --------------------------------------------------
-# Release Trend
+# RELEASE TREND
 # --------------------------------------------------
 
 st.subheader(
-    "📈 Netflix Growth Over Years"
+    "📈 Netflix Growth Over Time"
 )
+
 
 
 release = (
-    filtered_df
-    ["release_year"]
+
+    filtered_df["release_year"]
     .value_counts()
     .sort_index()
+
 )
 
 
-fig,ax = plt.subplots()
 
-ax.plot(
-    release.index,
-    release.values
+fig = px.line(
+
+    x=release.index,
+
+    y=release.values,
+
+    markers=True
+
 )
 
 
-ax.set_xlabel(
-    "Year"
+fig.update_traces(
+
+    line_color="#E50914",
+
+    line_width=4
+
 )
 
-ax.set_ylabel(
-    "Number of Titles"
+
+fig.update_layout(
+
+    template="plotly_dark",
+
+    height=450,
+
+    xaxis_title="Year",
+
+    yaxis_title="Number of Titles"
+
 )
 
 
-st.pyplot(fig)
+
+st.plotly_chart(
+    fig,
+    use_container_width=True
+)
 
 
 
 # --------------------------------------------------
-# Geography Analysis
+# COUNTRIES
 # --------------------------------------------------
 
 st.subheader(
-    "🌎 Top Producing Countries"
+    "🌎 Top Netflix Producing Countries"
 )
+
 
 
 countries = (
 
-    filtered_df
-    ["country"]
+    filtered_df["country"]
     .dropna()
     .str.split(", ")
     .explode()
@@ -327,25 +423,47 @@ countries = (
 
 
 
-fig,ax = plt.subplots()
+fig = px.bar(
 
-ax.barh(
-    countries.index,
-    countries.values
+    x=countries.values,
+
+    y=countries.index,
+
+    orientation="h",
+
+    color=countries.values,
+
+    color_continuous_scale="blues"
+
 )
 
 
-ax.set_xlabel(
-    "Titles"
+fig.update_layout(
+
+    template="plotly_dark",
+
+    height=500,
+
+    xaxis_title="Titles",
+
+    yaxis_title="Country"
+
 )
 
 
-st.pyplot(fig)
+
+st.plotly_chart(
+
+    fig,
+
+    use_container_width=True
+
+)
 
 
 
 # --------------------------------------------------
-# Genre Analysis
+# GENRES
 # --------------------------------------------------
 
 st.subheader(
@@ -353,43 +471,69 @@ st.subheader(
 )
 
 
+
 genres = (
 
-    filtered_df
-    ["listed_in"]
+    filtered_df["listed_in"]
+
     .dropna()
+
     .str.split(", ")
+
     .explode()
+
     .value_counts()
+
     .head(10)
 
 )
 
 
 
-fig,ax = plt.subplots()
+fig = px.bar(
 
-ax.bar(
-    genres.index,
-    genres.values
+    x=genres.index,
+
+    y=genres.values,
+
+    color=genres.values,
+
+    color_continuous_scale="purples"
+
 )
 
 
-plt.xticks(
-    rotation=45,
-    ha="right"
+
+fig.update_layout(
+
+    template="plotly_dark",
+
+    height=450,
+
+    xaxis_tickangle=-45,
+
+    showlegend=False
+
 )
 
 
-st.pyplot(fig)
+
+st.plotly_chart(
+
+    fig,
+
+    use_container_width=True
+
+)
 
 
 
 # --------------------------------------------------
-# Duration Analysis
+# DURATION
 # --------------------------------------------------
 
 if "duration" in filtered_df.columns:
+
 
     st.subheader(
         "⏱ Content Duration"
@@ -397,43 +541,65 @@ if "duration" in filtered_df.columns:
 
 
     duration = (
-        filtered_df
-        ["duration"]
+
+        filtered_df["duration"]
+
         .dropna()
+
         .value_counts()
+
         .head(10)
+
     )
 
 
-    fig,ax = plt.subplots()
 
+    fig = px.bar(
 
-    ax.bar(
-        duration.index,
-        duration.values
+        x=duration.index,
+
+        y=duration.values,
+
+        color=duration.values,
+
+        color_continuous_scale="greens"
+
     )
 
 
-    plt.xticks(
-        rotation=45
+
+    fig.update_layout(
+
+        template="plotly_dark",
+
+        height=400
+
     )
 
 
-    st.pyplot(fig)
+
+    st.plotly_chart(
+
+        fig,
+
+        use_container_width=True
+
+    )
 
 
 
 # --------------------------------------------------
-# Search Tool
+# SEARCH
 # --------------------------------------------------
 
 st.subheader(
-    "🔎 Search Netflix Library"
+    "🔎 Search Netflix Titles"
 )
 
 
+
 search = st.text_input(
-    "Search title"
+    "Search a movie or TV show"
 )
 
 
@@ -442,34 +608,36 @@ if search:
 
 
     result = filtered_df[
+
         filtered_df["title"]
+
         .str.contains(
+
             search,
+
             case=False,
+
             na=False
+
         )
+
     ]
 
 
     st.dataframe(
-        result[
-            [
-            "title",
-            "type",
-            "release_year",
-            "country",
-            "rating"
-            ]
-        ],
+
+        result,
+
         use_container_width=True
+
     )
 
 
 
 # --------------------------------------------------
-# Footer
+# FOOTER
 # --------------------------------------------------
 
 st.success(
-    "Built with Python | Pandas | Matplotlib | Streamlit 🚀"
+    "Built with Python | Pandas | Plotly | Streamlit 🚀"
 )
