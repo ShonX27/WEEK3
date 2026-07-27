@@ -17,10 +17,13 @@ st.set_page_config(
 @st.cache_data
 def load_data():
     df = pd.read_csv("netflix_titles.csv")
+    df.columns = df.columns.str.strip().str.lower()
     return df
 
 
 df = load_data()
+
+st.write(df.columns.tolist())
 
 
 # -----------------------------
