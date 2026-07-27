@@ -1,72 +1,85 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import numpy as np
 
 
-# -------------------------------------------------
-# PAGE CONFIG
-# -------------------------------------------------
+# --------------------------------------------------
+# PAGE CONFIGURATION
+# --------------------------------------------------
 
 st.set_page_config(
-    page_title="Netflix Business Intelligence Dashboard",
+    page_title="Netflix Analytics Dashboard",
     page_icon="🎬",
     layout="wide"
 )
 
 
-# -------------------------------------------------
-# CUSTOM UI
-# -------------------------------------------------
+# --------------------------------------------------
+# CUSTOM NETFLIX STYLE UI
+# --------------------------------------------------
 
 st.markdown(
-"""
-<style>
+    """
+    <style>
 
-.stApp {
-    background-color:#0f0f0f;
-    color:white;
-}
-
-
-h1 {
-    color:#E50914;
-    text-align:center;
-}
+    .stApp {
+        background-color: #0f0f0f;
+        color: white;
+    }
 
 
-h2,h3 {
-    color:white;
-}
+    h1 {
+        color: #E50914;
+        text-align:center;
+        font-size:45px;
+    }
 
 
-[data-testid="stMetric"] {
-
-    background:#181818;
-    padding:20px;
-    border-radius:15px;
-    border:1px solid #333;
-
-}
+    h2, h3 {
+        color:white;
+    }
 
 
-[data-testid="stMetricValue"] {
+    [data-testid="stMetric"] {
 
-    color:#E50914;
+        background-color:#181818;
+        padding:20px;
+        border-radius:15px;
+        border:1px solid #333;
 
-}
+    }
 
 
-</style>
-""",
-unsafe_allow_html=True
+    [data-testid="stMetricValue"] {
+
+        color:#E50914;
+
+    }
+
+
+    section[data-testid="stSidebar"] {
+
+        background-color:#141414;
+
+    }
+
+
+    .block-container {
+
+        padding-top:2rem;
+
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
 )
 
 
 
-# -------------------------------------------------
+# --------------------------------------------------
 # LOAD DATA
-# -------------------------------------------------
+# --------------------------------------------------
 
 @st.cache_data
 def load_data():
@@ -75,29 +88,12 @@ def load_data():
         "netflix_titles.csv"
     )
 
-
     df.columns = (
         df.columns
         .str.strip()
         .str.lower()
         .str.replace(" ","_")
     )
-
-
-    # Date processing
-
-    if "date_added" in df.columns:
-
-        df["date_added"] = pd.to_datetime(
-            df["date_added"],
-            errors="coerce"
-        )
-
-        df["month_added"] = (
-            df["date_added"]
-            .dt.month_name()
-        )
-
 
     return df
 
@@ -107,87 +103,132 @@ df = load_data()
 
 
 
-# -------------------------------------------------
-# TITLE
-# -------------------------------------------------
+# --------------------------------------------------
+# HEADER
+# --------------------------------------------------
 
 st.title(
-    "🎬 Netflix Business Intelligence Dashboard"
+    "🎬 Netflix Movies & TV Shows Analytics Dashboard"
 )
 
 
-st.write(
+st.markdown(
 """
-A strategic analytics dashboard designed to help
-business leaders understand content investment,
-customer preferences, and global opportunities.
+Explore Netflix's global content library through
+interactive business intelligence visualizations.
+
+**Dashboard Insights**
+- Content distribution
+- Audience ratings
+- Global production trends
+- Genre popularity
+- Release growth
 """
 )
 
 
 
-# -------------------------------------------------
-# SIDEBAR
-# -------------------------------------------------
+# --------------------------------------------------
+# SIDEBAR FILTERS
+# --------------------------------------------------
 
-st.sidebar.header(
+st.sidebar.title(
     "🎛 Filters"
 )
 
 
-content_type = st.sidebar.multiselect(
-
+type_filter = st.sidebar.multiselect(
     "Content Type",
-
-    df["type"].unique(),
-
-    default=df["type"].unique()
-
+    df["type"].dropna().unique(),
+    default=df["type"].dropna().unique()
 )
 
 
 
-filtered = df[
-    df["type"].isin(content_type)
+if "rating" in df.columns:
+
+    rating_filter = st.sidebar.multiselect(
+        "Rating",
+        df["rating"].dropna().unique(),
+        default=df["rating"].dropna().unique()
+    )
+
+else:
+
+    rating_filter = []
+
+
+
+filtered_df = df[
+    df["type"].isin(type_filter)
 ]
 
 
 
-# -------------------------------------------------
-# EXECUTIVE KPI
-# -------------------------------------------------
+if rating_filter:
+
+    filtered_df = filtered_df[
+        filtered_df["rating"].isin(rating_filter)
+    ]
+
+
+
+# --------------------------------------------------
+# KPI SECTION
+# --------------------------------------------------
 
 st.subheader(
-    "📊 Executive Overview"
+    "📊 Netflix Overview"
 )
 
 
 col1,col2,col3,col4 = st.columns(4)
 
 
+with col1:
 
-col1.metric(
-    "Total Content",
-    f"{len(filtered):,}"
-)
-
-
-col2.metric(
-    "Movies",
-    f"{len(filtered[filtered.type=='Movie']):,}"
-)
+    st.metric(
+        "Total Titles",
+        f"{len(filtered_df):,}"
+    )
 
 
-col3.metric(
-    "TV Shows",
-    f"{len(filtered[filtered.type=='TV Show']):,}"
-)
+with col2:
+
+    movies = len(
+        filtered_df[
+            filtered_df["type"]=="Movie"
+        ]
+    )
+
+    st.metric(
+        "Movies",
+        f"{movies:,}"
+    )
 
 
-col4.metric(
-    "Countries",
-    filtered.country.nunique()
-)
+with col3:
+
+    shows = len(
+        filtered_df[
+            filtered_df["type"]=="TV Show"
+        ]
+    )
+
+    st.metric(
+        "TV Shows",
+        f"{shows:,}"
+    )
+
+
+with col4:
+
+    latest = filtered_df["release_year"].max()
+
+    st.metric(
+        "Latest Release",
+        latest
+    )
 
 
 
@@ -195,47 +236,44 @@ st.divider()
 
 
 
-# -------------------------------------------------
-# CONTENT STRATEGY
-# -------------------------------------------------
-
-st.subheader(
-    "🎥 Content Portfolio Strategy"
-)
-
+# --------------------------------------------------
+# MOVIE VS TV SHOW
+# --------------------------------------------------
 
 col1,col2 = st.columns(2)
 
 
 
-# Movies vs Shows
-
 with col1:
 
+    st.subheader(
+        "🎥 Movies vs TV Shows"
+    )
 
-    content = filtered["type"].value_counts()
+
+    type_count = (
+        filtered_df["type"]
+        .value_counts()
+    )
 
 
     fig = px.pie(
 
-        values=content.values,
-
-        names=content.index,
-
-        hole=.5,
+        values=type_count.values,
+        names=type_count.index,
+        hole=0.45,
 
         color_discrete_sequence=[
             "#E50914",
-            "#444444"
-        ],
-
-        title="Movies vs TV Shows"
+            "#555555"
+        ]
 
     )
 
 
     fig.update_layout(
-        template="plotly_dark"
+        template="plotly_dark",
+        height=400
     )
 
 
@@ -246,16 +284,22 @@ with col1:
 
 
 
-# Rating
+# --------------------------------------------------
+# RATINGS
+# --------------------------------------------------
 
 with col2:
 
+    st.subheader(
+        "⭐ Content Ratings"
+    )
 
-    if "rating" in filtered.columns:
+
+    if "rating" in filtered_df.columns:
 
 
         ratings = (
-            filtered.rating
+            filtered_df["rating"]
             .value_counts()
             .head(10)
         )
@@ -264,20 +308,27 @@ with col2:
         fig = px.bar(
 
             x=ratings.index,
-
             y=ratings.values,
 
             color=ratings.values,
 
-            color_continuous_scale="reds",
-
-            title="Audience Rating Distribution"
+            color_continuous_scale="reds"
 
         )
 
 
         fig.update_layout(
-            template="plotly_dark"
+
+            template="plotly_dark",
+
+            height=400,
+
+            xaxis_title="Rating",
+
+            yaxis_title="Titles",
+
+            showlegend=False
+
         )
 
 
@@ -288,44 +339,58 @@ with col2:
 
 
 
-# -------------------------------------------------
-# CONTENT GROWTH
-# -------------------------------------------------
+# --------------------------------------------------
+# RELEASE TREND
+# --------------------------------------------------
 
 st.subheader(
-    "📈 Content Growth Trend"
+    "📈 Netflix Growth Over Time"
 )
 
 
-growth = (
-    filtered.release_year
+
+release = (
+
+    filtered_df["release_year"]
     .value_counts()
     .sort_index()
+
 )
 
 
 
 fig = px.line(
 
-    x=growth.index,
+    x=release.index,
 
-    y=growth.values,
+    y=release.values,
 
-    markers=True,
-
-    title="Netflix Content Added Over Time"
+    markers=True
 
 )
 
 
 fig.update_traces(
-    line_color="#E50914"
+
+    line_color="#E50914",
+
+    line_width=4
+
 )
 
 
 fig.update_layout(
-    template="plotly_dark"
+
+    template="plotly_dark",
+
+    height=450,
+
+    xaxis_title="Year",
+
+    yaxis_title="Number of Titles"
+
 )
+
 
 
 st.plotly_chart(
@@ -335,70 +400,19 @@ st.plotly_chart(
 
 
 
-# -------------------------------------------------
-# GENRE ANALYSIS
-# -------------------------------------------------
+# --------------------------------------------------
+# COUNTRIES
+# --------------------------------------------------
 
 st.subheader(
-    "🎭 Popular Genres"
+    "🌎 Top Netflix Producing Countries"
 )
 
-
-genres = (
-
-    filtered.listed_in
-    .dropna()
-    .str.split(", ")
-    .explode()
-    .value_counts()
-    .head(10)
-
-)
-
-
-
-fig = px.bar(
-
-    x=genres.values,
-
-    y=genres.index,
-
-    orientation="h",
-
-    color=genres.values,
-
-    color_continuous_scale="purples",
-
-    title="Most Popular Content Categories"
-
-)
-
-
-
-fig.update_layout(
-    template="plotly_dark"
-)
-
-
-st.plotly_chart(
-    fig,
-    use_container_width=True
-)
-
-
-
-# -------------------------------------------------
-# GLOBAL MARKET ANALYSIS
-# -------------------------------------------------
-
-st.subheader(
-    "🌎 Global Market Opportunity"
-)
 
 
 countries = (
 
-    filtered.country
+    filtered_df["country"]
     .dropna()
     .str.split(", ")
     .explode()
@@ -419,152 +433,211 @@ fig = px.bar(
 
     color=countries.values,
 
-    color_continuous_scale="blues",
+    color_continuous_scale="blues"
 
-    title="Top Content Producing Countries"
+)
+
+
+fig.update_layout(
+
+    template="plotly_dark",
+
+    height=500,
+
+    xaxis_title="Titles",
+
+    yaxis_title="Country"
+
+)
+
+
+
+st.plotly_chart(
+
+    fig,
+
+    use_container_width=True
+
+)
+
+
+
+# --------------------------------------------------
+# GENRES
+# --------------------------------------------------
+
+st.subheader(
+    "🎭 Most Popular Genres"
+)
+
+
+
+genres = (
+
+    filtered_df["listed_in"]
+
+    .dropna()
+
+    .str.split(", ")
+
+    .explode()
+
+    .value_counts()
+
+    .head(10)
+
+)
+
+
+
+fig = px.bar(
+
+    x=genres.index,
+
+    y=genres.values,
+
+    color=genres.values,
+
+    color_continuous_scale="purples"
 
 )
 
 
 
 fig.update_layout(
-    template="plotly_dark"
+
+    template="plotly_dark",
+
+    height=450,
+
+    xaxis_tickangle=-45,
+
+    showlegend=False
+
 )
 
 
 
 st.plotly_chart(
+
     fig,
+
     use_container_width=True
+
 )
 
 
 
-# -------------------------------------------------
-# RELEASE SEASONALITY
-# -------------------------------------------------
+# --------------------------------------------------
+# DURATION
+# --------------------------------------------------
 
-if "month_added" in filtered.columns:
+if "duration" in filtered_df.columns:
 
 
     st.subheader(
-        "📅 Best Release Months"
+        "⏱ Content Duration"
     )
 
 
-    months = (
+    duration = (
 
-        filtered.month_added
+        filtered_df["duration"]
+
+        .dropna()
+
         .value_counts()
 
+        .head(10)
+
     )
+
 
 
     fig = px.bar(
 
-        x=months.index,
+        x=duration.index,
 
-        y=months.values,
+        y=duration.values,
 
-        color=months.values,
+        color=duration.values,
 
         color_continuous_scale="greens"
 
     )
 
 
+
     fig.update_layout(
-        template="plotly_dark"
+
+        template="plotly_dark",
+
+        height=400
+
     )
+
 
 
     st.plotly_chart(
+
         fig,
+
         use_container_width=True
+
     )
 
 
 
-# -------------------------------------------------
-# CONTENT AGE ANALYSIS
-# -------------------------------------------------
+# --------------------------------------------------
+# SEARCH
+# --------------------------------------------------
 
 st.subheader(
-    "⏳ Content Freshness Analysis"
-)
-
-
-current_year = 2026
-
-
-filtered["content_age"] = (
-
-    current_year -
-
-    filtered.release_year
-
+    "🔎 Search Netflix Titles"
 )
 
 
 
-fig = px.histogram(
-
-    filtered,
-
-    x="content_age",
-
-    nbins=20,
-
-    title="Age of Netflix Content"
-
+search = st.text_input(
+    "Search a movie or TV show"
 )
 
 
 
-fig.update_layout(
-    template="plotly_dark"
-)
+if search:
+
+
+    result = filtered_df[
+
+        filtered_df["title"]
+
+        .str.contains(
+
+            search,
+
+            case=False,
+
+            na=False
+
+        )
+
+    ]
+
+
+    st.dataframe(
+
+        result,
+
+        use_container_width=True
+
+    )
 
 
 
-st.plotly_chart(
-    fig,
-    use_container_width=True
-)
-
-
-
-# -------------------------------------------------
-# BUSINESS INSIGHTS
-# -------------------------------------------------
-
-st.subheader(
-    "💡 Business Recommendations"
-)
-
-
-st.info(
-"""
-Based on the dashboard:
-
-• Invest in high-performing genres with strong audience demand.
-
-• Expand international content markets with high production volume.
-
-• Balance movies and TV shows according to customer engagement.
-
-• Prioritize newer content to maintain subscriber interest.
-
-• Use seasonal release patterns to maximize marketing impact.
-"""
-)
-
-
-
-# -------------------------------------------------
+# --------------------------------------------------
 # FOOTER
-# -------------------------------------------------
+# --------------------------------------------------
 
 st.success(
-"Built with Python | Pandas | Plotly | Streamlit 🚀"
+    "Built with Python | Pandas | Plotly | Streamlit 🚀"
 )
