@@ -1,2 +1,0 @@
-df = load_data()
-st.write(df.columns.tolist())
