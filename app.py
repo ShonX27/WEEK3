@@ -17,13 +17,19 @@ st.set_page_config(
 @st.cache_data
 def load_data():
     df = pd.read_csv("netflix_titles.csv")
-    df.columns = df.columns.str.strip().str.lower()
+
+    # Clean column names
+    df.columns = (
+        df.columns
+        .str.strip()
+        .str.lower()
+        .str.replace(" ", "_")
+    )
+
     return df
 
 
 df = load_data()
-
-st.write(df.columns.tolist())
 
 
 # -----------------------------
@@ -47,28 +53,61 @@ with st.expander("View Dataset"):
 
 
 # -----------------------------
+# Check Required Columns
+# -----------------------------
+required_columns = [
+    "type",
+    "title",
+    "country",
+    "release_year",
+    "listed_in"
+]
+
+missing_columns = [
+    col for col in required_columns if col not in df.columns
+]
+
+if missing_columns:
+    st.error(
+        f"Missing columns in dataset: {missing_columns}"
+    )
+    st.write("Available columns:")
+    st.write(df.columns.tolist())
+    st.stop()
+
+
+# -----------------------------
 # Sidebar Filters
 # -----------------------------
 st.sidebar.header("Filters")
 
+
 type_filter = st.sidebar.multiselect(
     "Select Content Type",
-    options=df["type"].unique(),
-    default=df["type"].unique()
+    options=df["type"].dropna().unique(),
+    default=df["type"].dropna().unique()
 )
 
 
-rating_filter = st.sidebar.multiselect(
-    "Select Rating",
-    options=df["rating"].dropna().unique(),
-    default=df["rating"].dropna().unique()[:10]
-)
+if "rating" in df.columns:
 
+    rating_filter = st.sidebar.multiselect(
+        "Select Rating",
+        options=df["rating"].dropna().unique(),
+        default=df["rating"].dropna().unique()[:10]
+    )
 
-filtered_df = df[
-    (df["type"].isin(type_filter)) &
-    (df["rating"].isin(rating_filter))
-]
+    filtered_df = df[
+        (df["type"].isin(type_filter)) &
+        (df["rating"].isin(rating_filter))
+    ]
+
+else:
+
+    filtered_df = df[
+        df["type"].isin(type_filter)
+    ]
+
 
 
 # -----------------------------
@@ -83,21 +122,15 @@ with col1:
     )
 
 with col2:
-    movies = len(
-        filtered_df[filtered_df["type"] == "Movie"]
-    )
     st.metric(
         "Movies",
-        movies
+        len(filtered_df[filtered_df["type"] == "Movie"])
     )
 
 with col3:
-    shows = len(
-        filtered_df[filtered_df["type"] == "TV Show"]
-    )
     st.metric(
         "TV Shows",
-        shows
+        len(filtered_df[filtered_df["type"] == "TV Show"])
     )
 
 
@@ -105,7 +138,7 @@ st.divider()
 
 
 # -----------------------------
-# Content Type Chart
+# Movies vs TV Shows
 # -----------------------------
 st.subheader("Movies vs TV Shows")
 
@@ -136,7 +169,6 @@ year_count = (
     .sort_index()
 )
 
-
 fig, ax = plt.subplots()
 
 ax.plot(
@@ -156,27 +188,27 @@ st.pyplot(fig)
 # -----------------------------
 st.subheader("Top 10 Countries Producing Netflix Content")
 
+if "country" in filtered_df.columns:
 
-countries = (
-    filtered_df["country"]
-    .dropna()
-    .str.split(", ")
-    .explode()
-    .value_counts()
-    .head(10)
-)
+    countries = (
+        filtered_df["country"]
+        .dropna()
+        .str.split(", ")
+        .explode()
+        .value_counts()
+        .head(10)
+    )
 
+    fig, ax = plt.subplots()
 
-fig, ax = plt.subplots()
+    ax.barh(
+        countries.index,
+        countries.values
+    )
 
-ax.barh(
-    countries.index,
-    countries.values
-)
+    ax.set_xlabel("Number of Titles")
 
-ax.set_xlabel("Number of Titles")
-
-st.pyplot(fig)
+    st.pyplot(fig)
 
 
 
@@ -185,32 +217,32 @@ st.pyplot(fig)
 # -----------------------------
 st.subheader("Most Popular Genres")
 
+if "listed_in" in filtered_df.columns:
 
-genres = (
-    filtered_df["listed_in"]
-    .dropna()
-    .str.split(", ")
-    .explode()
-    .value_counts()
-    .head(10)
-)
+    genres = (
+        filtered_df["listed_in"]
+        .dropna()
+        .str.split(", ")
+        .explode()
+        .value_counts()
+        .head(10)
+    )
 
+    fig, ax = plt.subplots()
 
-fig, ax = plt.subplots()
+    ax.bar(
+        genres.index,
+        genres.values
+    )
 
-ax.bar(
-    genres.index,
-    genres.values
-)
+    plt.xticks(
+        rotation=45,
+        ha="right"
+    )
 
-plt.xticks(
-    rotation=45,
-    ha="right"
-)
+    ax.set_ylabel("Titles")
 
-ax.set_ylabel("Titles")
-
-st.pyplot(fig)
+    st.pyplot(fig)
 
 
 
@@ -219,13 +251,13 @@ st.pyplot(fig)
 # -----------------------------
 st.subheader("🔎 Search Netflix Titles")
 
-
 search = st.text_input(
     "Search movie or TV show"
 )
 
 
 if search:
+
     results = filtered_df[
         filtered_df["title"]
         .str.contains(
@@ -235,18 +267,19 @@ if search:
         )
     ]
 
-    st.dataframe(
-        results[
-            [
-                "title",
-                "type",
-                "country",
-                "release_year",
-                "rating"
-            ]
-        ]
-    )
+    display_columns = [
+        "title",
+        "type",
+        "country",
+        "release_year"
+    ]
 
+    if "rating" in filtered_df.columns:
+        display_columns.append("rating")
+
+    st.dataframe(
+        results[display_columns]
+    )
 
 
 # -----------------------------
