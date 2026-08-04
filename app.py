@@ -140,6 +140,29 @@ if rating_filter:
         .isin(rating_filter)
     ]
 
+min_year = int(
+    df["release_year"]
+    .dropna()
+    .min()
+)
+
+max_year = int(
+    df["release_year"]
+    .dropna()
+    .max()
+)
+
+
+year_range = st.sidebar.slider(
+    "📅 Release Year Range",
+    min_year,
+    max_year,
+    (min_year, max_year)
+)
+
+search_title = st.sidebar.text_input(
+    "🔎 Search Movie / Show Title"
+)
 
 
 # --------------------------------------------------
