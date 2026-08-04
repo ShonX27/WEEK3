@@ -175,6 +175,22 @@ if search_title:
         filtered_df["title"].str.contains(search_title, case=False, na=False)
     ]
 
+if "country" in df.columns:
+
+    country_filter = st.sidebar.multiselect(
+        "🌍 Country",
+        df["country"]
+        .dropna()
+        .str.split(", ")
+        .explode()
+        .unique(),
+        default=[]
+    )
+
+else:
+
+    country_filter = []
+
 
 # --------------------------------------------------
 # KPI Section
