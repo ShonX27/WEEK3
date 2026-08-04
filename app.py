@@ -186,10 +186,24 @@ if "country" in df.columns:
         .unique(),
         default=[]
     )
-
 else:
 
     country_filter = []
+
+if rating_filter:
+
+    filtered_df = filtered_df[
+        filtered_df["rating"]
+        .isin(rating_filter)
+    ]
+
+if country_filter:
+
+    filtered_df = filtered_df[
+        filtered_df["country"]
+        .dropna()
+        .apply(lambda c: any(country in c for country in country_filter))
+    ]
 
 
 # --------------------------------------------------
