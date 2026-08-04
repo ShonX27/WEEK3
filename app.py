@@ -460,9 +460,7 @@ search = st.text_input(
 )
 
 
-
 if search:
-
 
     result = filtered_df[
         filtered_df["title"]
@@ -486,7 +484,6 @@ if search:
         ],
         use_container_width=True
     )
-
 
 
 # --------------------------------------------------
