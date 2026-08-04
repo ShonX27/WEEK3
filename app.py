@@ -201,8 +201,10 @@ if country_filter:
 
     filtered_df = filtered_df[
         filtered_df["country"]
-        .dropna()
-        .apply(lambda c: any(country in c for country in country_filter))
+        .apply(
+            lambda c: any(country in c for country in country_filter)
+            if pd.notna(c) else False
+        )
     ]
 
 
