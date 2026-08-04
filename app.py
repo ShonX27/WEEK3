@@ -226,6 +226,49 @@ with col4:
 st.divider()
 
 # --------------------------------------------------
+# Release Year Filter Results
+# --------------------------------------------------
+
+st.divider()
+
+st.subheader("📅 Movies & Shows by Selected Release Years")
+
+
+st.write(
+    f"Showing titles released between **{year_range[0]} and {year_range[1]}**"
+)
+
+
+# Check if results exist
+
+if len(filtered_df) > 0:
+
+    year_results = filtered_df[
+        [
+            "title",
+            "type",
+            "release_year",
+            "country",
+            "rating",
+            "listed_in"
+        ]
+    ]
+
+
+    st.dataframe(
+        year_results,
+        use_container_width=True,
+        height=400
+    )
+
+
+else:
+
+    st.warning(
+        "No movies or shows found for this year range."
+    )
+
+# --------------------------------------------------
 # Filtered Results Preview
 # --------------------------------------------------
 
