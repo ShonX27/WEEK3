@@ -225,7 +225,43 @@ with col4:
 
 st.divider()
 
+# --------------------------------------------------
+# Filtered Results Preview
+# --------------------------------------------------
 
+st.divider()
+
+st.subheader("🎬 Filtered Netflix Titles")
+
+st.write(
+    f"Showing **{len(filtered_df)} titles** based on your selected filters."
+)
+
+
+# Display filtered movie/show list
+
+if len(filtered_df) > 0:
+
+    st.dataframe(
+        filtered_df[
+            [
+                "title",
+                "type",
+                "release_year",
+                "country",
+                "rating",
+                "listed_in"
+            ]
+        ],
+        use_container_width=True,
+        height=400
+    )
+
+else:
+
+    st.warning(
+        "No titles found. Try adjusting your filters."
+    )
 
 # --------------------------------------------------
 # Content Distribution
