@@ -15,7 +15,7 @@ st.set_page_config(
 
 
 # --------------------------------------------------
-# Custom Styling
+# Styling
 # --------------------------------------------------
 
 st.markdown(
@@ -23,18 +23,10 @@ st.markdown(
     <style>
 
     .main {
-        background-color: #fafafa;
+        background-color:#fafafa;
     }
 
     h1 {
-        text-align: center;
-    }
-
-    .metric-card {
-        background-color: white;
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0px 2px 8px rgba(0,0,0,0.1);
         text-align:center;
     }
 
@@ -46,15 +38,13 @@ st.markdown(
 
 
 # --------------------------------------------------
-# Load Data
+# Load Dataset
 # --------------------------------------------------
 
 @st.cache_data
 def load_data():
 
-    df = pd.read_csv(
-        "netflix_titles.csv"
-    )
+    df = pd.read_csv("netflix_titles.csv")
 
     df.columns = (
         df.columns
@@ -77,18 +67,17 @@ df = load_data()
 
 st.title("🎬 Netflix Content Analytics Dashboard")
 
+
 st.markdown(
 """
-Explore Netflix's movies and TV shows using interactive
-data visualization.
+Explore Netflix movies and TV shows with interactive filters.
 
-**Dataset Analysis Includes:**
-- Content distribution
-- Release trends
-- Countries
-- Genres
-- Ratings
-- Search analytics
+Dashboard Features:
+- Search Netflix titles
+- Filter by release year
+- Analyze genres
+- Explore countries
+- Compare movies and TV shows
 """
 )
 
@@ -101,36 +90,100 @@ data visualization.
 st.sidebar.header("🎛 Dashboard Filters")
 
 
+# Content Type
+
 type_filter = st.sidebar.multiselect(
-    "Content Type",
-    df["type"].unique(),
-    default=df["type"].unique()
+
+    "🎥 Content Type",
+
+    df["type"].dropna().unique(),
+
+    default=df["type"].dropna().unique()
+
 )
 
 
 
+# Rating
+
 if "rating" in df.columns:
 
     rating_filter = st.sidebar.multiselect(
-        "Rating",
-        df["rating"]
-        .dropna()
-        .unique(),
-        default=df["rating"]
-        .dropna()
-        .unique()
-    )
 
+        "⭐ Rating",
+
+        sorted(
+            df["rating"]
+            .dropna()
+            .unique()
+        ),
+
+        default=sorted(
+            df["rating"]
+            .dropna()
+            .unique()
+        )
+
+    )
 
 else:
 
-    rating_filter = []
+    rating_filter=[]
 
 
 
-filtered_df = df[
-    df["type"].isin(type_filter)
+# Year Slider
+
+min_year = int(
+    df["release_year"]
+    .min()
+)
+
+
+max_year = int(
+    df["release_year"]
+    .max()
+)
+
+
+
+year_range = st.sidebar.slider(
+
+    "📅 Release Year",
+
+    min_year,
+
+    max_year,
+
+    (min_year,max_year)
+
+)
+
+
+
+# Search
+
+search_title = st.sidebar.text_input(
+
+    "🔎 Search Movie / TV Show"
+
+)
+
+
+
+# --------------------------------------------------
+# Apply Filters
+# --------------------------------------------------
+
+filtered_df = df.copy()
+
+
+
+filtered_df = filtered_df[
+    filtered_df["type"]
+    .isin(type_filter)
 ]
+
 
 
 if rating_filter:
@@ -140,29 +193,37 @@ if rating_filter:
         .isin(rating_filter)
     ]
 
-min_year = int(
-    df["release_year"]
-    .dropna()
-    .min()
-)
-
-max_year = int(
-    df["release_year"]
-    .dropna()
-    .max()
-)
 
 
-year_range = st.sidebar.slider(
-    "📅 Release Year Range",
-    min_year,
-    max_year,
-    (min_year, max_year)
-)
+filtered_df = filtered_df[
 
-search_title = st.sidebar.text_input(
-    "🔎 Search Movie / Show Title"
-)
+    (filtered_df["release_year"] >= year_range[0])
+
+    &
+
+    (filtered_df["release_year"] <= year_range[1])
+
+]
+
+
+
+if search_title:
+
+    filtered_df = filtered_df[
+
+        filtered_df["title"]
+        .str.contains(
+
+            search_title,
+
+            case=False,
+
+            na=False
+
+        )
+
+    ]
+
 
 
 # --------------------------------------------------
@@ -175,106 +236,143 @@ st.subheader("📊 Netflix Overview")
 col1,col2,col3,col4 = st.columns(4)
 
 
+
 with col1:
+
     st.metric(
+
         "Total Titles",
+
         len(filtered_df)
+
     )
+
 
 
 with col2:
 
-    movies = len(
-        filtered_df[
-            filtered_df["type"]
-            =="Movie"
-        ]
+    st.metric(
+
+        "Movies",
+
+        len(
+            filtered_df[
+                filtered_df["type"]=="Movie"
+            ]
+        )
+
     )
 
-    st.metric(
-        "Movies",
-        movies
-    )
 
 
 with col3:
 
-    shows = len(
-        filtered_df[
-            filtered_df["type"]
-            =="TV Show"
-        ]
+    st.metric(
+
+        "TV Shows",
+
+        len(
+            filtered_df[
+                filtered_df["type"]=="TV Show"
+            ]
+        )
+
     )
 
-    st.metric(
-        "TV Shows",
-        shows
-    )
 
 
 with col4:
 
-    years = filtered_df["release_year"].max()
-
     st.metric(
+
         "Latest Release",
-        years
+
+        filtered_df["release_year"]
+        .max()
+
+        if len(filtered_df)>0
+
+        else "N/A"
+
     )
 
 
 
-st.divider()
-
 # --------------------------------------------------
-# Filtered Results Preview
+# Filter Results Table
 # --------------------------------------------------
 
 st.divider()
+
 
 st.subheader("🎬 Filtered Netflix Titles")
 
+
 st.write(
-    f"Showing **{len(filtered_df)} titles** based on your selected filters."
+    f"Showing **{len(filtered_df)} titles**"
 )
 
 
-# Display filtered movie/show list
 
-if len(filtered_df) > 0:
+if len(filtered_df)>0:
+
+
+    columns = [
+
+        "title",
+        "type",
+        "release_year",
+        "country",
+        "rating",
+        "listed_in"
+
+    ]
+
+
+    available_columns = [
+
+        c for c in columns
+
+        if c in filtered_df.columns
+
+    ]
+
+
 
     st.dataframe(
-        filtered_df[
-            [
-                "title",
-                "type",
-                "release_year",
-                "country",
-                "rating",
-                "listed_in"
-            ]
-        ],
+
+        filtered_df[available_columns],
+
         use_container_width=True,
-        height=400
+
+        height=350
+
     )
+
 
 else:
 
     st.warning(
-        "No titles found. Try adjusting your filters."
+        "No results found. Adjust your filters."
     )
 
+
+
 # --------------------------------------------------
-# Content Distribution
+# Movies vs TV Shows
 # --------------------------------------------------
 
 col1,col2 = st.columns(2)
 
 
+
 with col1:
+
 
     st.subheader(
         "🎥 Movies vs TV Shows"
     )
+
 
     type_count = (
         filtered_df["type"]
@@ -284,17 +382,30 @@ with col1:
 
     fig,ax = plt.subplots()
 
+
     ax.pie(
+
         type_count,
+
         labels=type_count.index,
+
         autopct="%1.1f%%"
+
     )
+
 
     st.pyplot(fig)
 
 
 
+
+# --------------------------------------------------
+# Ratings
+# --------------------------------------------------
+
+
 with col2:
+
 
     st.subheader(
         "⭐ Ratings Distribution"
@@ -303,23 +414,32 @@ with col2:
 
     if "rating" in filtered_df.columns:
 
-        rating_count = (
+
+        rating_count=(
+
             filtered_df["rating"]
+
             .value_counts()
+
             .head(10)
+
         )
 
 
-        fig,ax = plt.subplots()
+        fig,ax=plt.subplots()
+
 
         ax.bar(
+
             rating_count.index,
+
             rating_count.values
+
         )
 
-        plt.xticks(
-            rotation=45
-        )
+
+        plt.xticks(rotation=45)
+
 
         st.pyplot(fig)
 
@@ -334,29 +454,37 @@ st.subheader(
 )
 
 
-release = (
-    filtered_df
-    ["release_year"]
+
+release=(
+
+    filtered_df["release_year"]
+
     .value_counts()
+
     .sort_index()
+
 )
 
 
-fig,ax = plt.subplots()
+
+fig,ax=plt.subplots()
+
+
 
 ax.plot(
+
     release.index,
+
     release.values
+
 )
 
 
-ax.set_xlabel(
-    "Year"
-)
 
-ax.set_ylabel(
-    "Number of Titles"
-)
+ax.set_xlabel("Year")
+
+ax.set_ylabel("Titles")
+
 
 
 st.pyplot(fig)
@@ -364,117 +492,43 @@ st.pyplot(fig)
 
 
 # --------------------------------------------------
-# Geography Analysis
+# Countries
 # --------------------------------------------------
 
-st.subheader(
-    "🌎 Top Producing Countries"
-)
+if "country" in filtered_df.columns:
 
-
-countries = (
-
-    filtered_df
-    ["country"]
-    .dropna()
-    .str.split(", ")
-    .explode()
-    .value_counts()
-    .head(10)
-
-)
-
-
-
-fig,ax = plt.subplots()
-
-ax.barh(
-    countries.index,
-    countries.values
-)
-
-
-ax.set_xlabel(
-    "Titles"
-)
-
-
-st.pyplot(fig)
-
-
-
-# --------------------------------------------------
-# Genre Analysis
-# --------------------------------------------------
-
-st.subheader(
-    "🎭 Most Popular Genres"
-)
-
-
-genres = (
-
-    filtered_df
-    ["listed_in"]
-    .dropna()
-    .str.split(", ")
-    .explode()
-    .value_counts()
-    .head(10)
-
-)
-
-
-
-fig,ax = plt.subplots()
-
-ax.bar(
-    genres.index,
-    genres.values
-)
-
-
-plt.xticks(
-    rotation=45,
-    ha="right"
-)
-
-
-st.pyplot(fig)
-
-
-
-# --------------------------------------------------
-# Duration Analysis
-# --------------------------------------------------
-
-if "duration" in filtered_df.columns:
 
     st.subheader(
-        "⏱ Content Duration"
+        "🌎 Top Producing Countries"
     )
 
 
-    duration = (
-        filtered_df
-        ["duration"]
+    countries=(
+
+        filtered_df["country"]
+
         .dropna()
+
+        .str.split(", ")
+
+        .explode()
+
         .value_counts()
+
         .head(10)
+
     )
 
 
-    fig,ax = plt.subplots()
+    fig,ax=plt.subplots()
 
 
-    ax.bar(
-        duration.index,
-        duration.values
-    )
+    ax.barh(
 
+        countries.index,
 
-    plt.xticks(
-        rotation=45
+        countries.values
+
     )
 
 
@@ -482,44 +536,61 @@ if "duration" in filtered_df.columns:
 
 
 
+
 # --------------------------------------------------
-# Search Tool
+# Genres
 # --------------------------------------------------
 
-st.subheader(
-    "🔎 Search Netflix Library"
-)
+if "listed_in" in filtered_df.columns:
 
 
-search = st.text_input(
-    "Search title"
-)
-
-
-if search:
-
-    result = filtered_df[
-        filtered_df["title"]
-        .str.contains(
-            search,
-            case=False,
-            na=False
-        )
-    ]
-
-
-    st.dataframe(
-        result[
-            [
-            "title",
-            "type",
-            "release_year",
-            "country",
-            "rating"
-            ]
-        ],
-        use_container_width=True
+    st.subheader(
+        "🎭 Popular Genres"
     )
+
+
+    genres=(
+
+        filtered_df["listed_in"]
+
+        .dropna()
+
+        .str.split(", ")
+
+        .explode()
+
+        .value_counts()
+
+        .head(10)
+
+    )
+
+
+
+    fig,ax=plt.subplots()
+
+
+
+    ax.bar(
+
+        genres.index,
+
+        genres.values
+
+    )
+
+
+    plt.xticks(
+
+        rotation=45,
+
+        ha="right"
+
+    )
+
+
+    st.pyplot(fig)
+
 
 
 # --------------------------------------------------
