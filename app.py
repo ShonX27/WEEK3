@@ -307,6 +307,52 @@ else:
     )
 
 # --------------------------------------------------
+# Display Filtered Movie Results
+# --------------------------------------------------
+
+st.divider()
+
+st.subheader("🎬 Movies & TV Shows Matching Your Filters")
+
+
+st.write(
+    f"Found **{len(filtered_df)} titles**"
+)
+
+
+if len(filtered_df) > 0:
+
+    display_columns = [
+        "title",
+        "type",
+        "release_year",
+        "country",
+        "rating",
+        "listed_in"
+    ]
+
+    # Only use columns that exist
+    display_columns = [
+        col for col in display_columns
+        if col in filtered_df.columns
+    ]
+
+
+    st.dataframe(
+        filtered_df[display_columns],
+        use_container_width=True,
+        height=500
+    )
+
+
+else:
+
+    st.warning(
+        "No movies found. Try changing your filters."
+    )
+
+
+# --------------------------------------------------
 # Content Distribution
 # --------------------------------------------------
 
