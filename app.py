@@ -160,9 +160,20 @@ year_range = st.sidebar.slider(
     (min_year, max_year)
 )
 
+# Apply year range filter
+filtered_df = filtered_df[
+    filtered_df["release_year"].between(year_range[0], year_range[1])
+]
+
 search_title = st.sidebar.text_input(
     "🔎 Search Movie / Show Title"
 )
+
+# Apply title search filter
+if search_title:
+    filtered_df = filtered_df[
+        filtered_df["title"].str.contains(search_title, case=False, na=False)
+    ]
 
 
 # --------------------------------------------------
